@@ -94,49 +94,25 @@ async def transfer_amount(request):
 
     async with db.pool.acquire() as conn:
         async with conn.transaction():
-            account_from = await db.fetchrow(
-                'SELECT num, amount FROM accounts WHERE num = $1 FOR UPDATE',
-                num_from,
-                conn=conn,
-            )
+            try:
+                amount_from = await db.fetchrow(
+                    'UPDATE accounts SET amount = amount - $1 WHERE num = $2 RETURNING amount',
+                    amount,
+                    num_from,
+                    conn=conn,
+                )
 
-            if not account_from:
-                return response.json({
-                    'success': False,
-                    'error': 'account_from_not_found',
-                }, status=400)
-
-            if account_from['amount'] - amount < 0:
+                amount_to = await db.fetchrow(
+                    'UPDATE accounts SET amount = amount + $1 WHERE num = $2 RETURNING amount',
+                    amount,
+                    num_to,
+                    conn=conn,
+                )
+            except exceptions.PostgresError as e:
                 return response.json({
                     'success': False,
                     'error': 'not_enough_funds',
-                }, status=400)
-
-            account_to = await db.fetchrow(
-                'SELECT num, amount FROM accounts WHERE num = $1 FOR UPDATE',
-                num_to,
-                conn=conn,
-            )
-
-            if not account_to:
-                return response.json({
-                    'success': False,
-                    'error': 'account_to_not_found',
-                }, status=400)
-
-            amount_from = await db.fetchrow(
-                'UPDATE accounts SET amount = amount - $1 WHERE num = $2 RETURNING amount',
-                amount,
-                num_from,
-                conn=conn,
-            )
-
-            amount_to = await db.fetchrow(
-                'UPDATE accounts SET amount = amount + $1 WHERE num = $2 RETURNING amount',
-                amount,
-                num_to,
-                conn=conn,
-            )
+                })
 
     return response.json({
         'success': True,
