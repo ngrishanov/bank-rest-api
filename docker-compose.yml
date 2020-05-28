@@ -1,0 +1,17 @@
+version: "3.7"
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    command: ["python3", "./run.py"]
+  postgres:
+    image: "postgres:12.1-alpine"
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=bank-rest-api
+      - POSTGRES_USER=bank-rest-api
+      - POSTGRES_DB=bank-rest-api
